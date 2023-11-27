@@ -1,8 +1,8 @@
+use crate::models::monster::Monster;
+use crate::repository::database::Database;
+use crate::repository::schema::monsters::dsl::*;
 use chrono::prelude::*;
 use diesel::prelude::*;
-use crate::models::monster::Monster;
-use crate::repository::schema::monsters::dsl::*;
-use crate::repository::database::Database;
 
 pub fn get_monsters(db: &Database) -> Vec<Monster> {
     let mut connection = db.get_connection();
@@ -15,6 +15,8 @@ pub fn create_monster(db: &Database, monster: Monster) -> Result<Monster, diesel
     let mut connection = db.get_connection();
     let monster = Monster {
         id: uuid::Uuid::new_v4().to_string(),
+        created_at: Some(Utc::now().naive_utc()),
+        updated_at: Some(Utc::now().naive_utc()),
         ..monster
     };
     diesel::insert_into(monsters)
@@ -26,7 +28,10 @@ pub fn create_monster(db: &Database, monster: Monster) -> Result<Monster, diesel
 
 pub fn get_monster_by_id(db: &Database, monster_id: &str) -> Option<Monster> {
     let mut connection = db.get_connection();
-    match monsters.find(monster_id).get_result::<Monster>(&mut connection) {
+    match monsters
+        .find(monster_id)
+        .get_result::<Monster>(&mut connection)
+    {
         Ok(monster) => Some(monster),
         Err(_) => None,
     }
@@ -35,7 +40,10 @@ pub fn get_monster_by_id(db: &Database, monster_id: &str) -> Option<Monster> {
 pub fn delete_monster_by_id(db: &Database, monster_id: &str) -> Option<usize> {
     let mut connection = db.get_connection();
 
-    if let Ok(_existing_monster) = monsters.find(monster_id).get_result::<Monster>(&mut connection) {
+    if let Ok(_existing_monster) = monsters
+        .find(monster_id)
+        .get_result::<Monster>(&mut connection)
+    {
         let count = diesel::delete(monsters.find(monster_id))
             .execute(&mut connection)
             .expect("Error deleting monster by id");
@@ -53,7 +61,10 @@ pub fn update_monster_by_id(
 ) -> Option<Monster> {
     let mut connection = db.get_connection();
 
-    if let Ok(_existing_monster) = monsters.find(monster_id).get_result::<Monster>(&mut connection) {
+    if let Ok(_existing_monster) = monsters
+        .find(monster_id)
+        .get_result::<Monster>(&mut connection)
+    {
         monster.updated_at = Some(Utc::now().naive_utc());
         let updated_monster = diesel::update(monsters.find(monster_id))
             .set(&monster)
@@ -64,4 +75,14 @@ pub fn update_monster_by_id(
     } else {
         None
     }
+}
+
+pub fn delete_all_monsters(db: &Database) -> Option<usize> {
+    let mut connection = db.get_connection();
+
+    let count = diesel::delete(monsters)
+        .execute(&mut connection)
+        .expect("Error deleting all monsters");
+
+    Some(count)
 }

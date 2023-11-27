@@ -1,6 +1,6 @@
 use diesel::r2d2::{self, ConnectionManager};
-use dotenvy::dotenv;
 use diesel::PgConnection;
+use dotenvy::dotenv;
 
 type DBPool = r2d2::Pool<ConnectionManager<PgConnection>>;
 
@@ -20,6 +20,8 @@ impl Database {
     }
 
     pub fn get_connection(&self) -> r2d2::PooledConnection<ConnectionManager<PgConnection>> {
-        self.pool.get().expect("Failed to get a database connection")
+        self.pool
+            .get()
+            .expect("Failed to get a database connection")
     }
 }

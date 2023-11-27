@@ -1,10 +1,6 @@
 use actix_web::{get, web, App, HttpResponse, HttpServer, Responder, Result};
-use serde::{Serialize};
-
-mod api;
-mod models;
-mod repository;
-mod utils;
+use rust_certification::{api, repository};
+use serde::Serialize;
 
 #[derive(Serialize)]
 pub struct Response {
@@ -19,7 +15,6 @@ async fn healthcheck() -> impl Responder {
     HttpResponse::Ok().json(response)
 }
 
-
 async fn not_found() -> Result<HttpResponse> {
     let response = Response {
         message: "Resource not found".to_string(),
@@ -32,15 +27,15 @@ async fn main() -> std::io::Result<()> {
     let todo_db = repository::database::Database::new();
     let app_data = web::Data::new(todo_db);
 
-    HttpServer::new(move ||
+    HttpServer::new(move || {
         App::new()
             .app_data(app_data.clone())
             .configure(api::config::config)
             .service(healthcheck)
             .default_service(web::route().to(not_found))
             .wrap(actix_web::middleware::Logger::default())
-    )
-        .bind(("127.0.0.1", 8080))?
-        .run()
-        .await
+    })
+    .bind(("127.0.0.1", 8080))?
+    .run()
+    .await
 }
