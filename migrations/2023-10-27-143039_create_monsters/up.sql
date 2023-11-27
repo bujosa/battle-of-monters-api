@@ -2,6 +2,7 @@
 CREATE TABLE monsters (
     id varchar PRIMARY KEY,
     image_url varchar NOT NULL,
+    name varchar NOT NULL,
     attack INT NOT NULL,
     defense INT NOT NULL,
     hp INT NOT NULL,
