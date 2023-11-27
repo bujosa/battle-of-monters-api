@@ -1,10 +1,10 @@
-use actix_web::{web, get, post, delete, put, HttpResponse, Error};
-use actix_multipart::Multipart;
-use futures::TryStreamExt;
-use tempfile::NamedTempFile;
-use std::io::Write;
-use crate::{models::monster::Monster, repository::database::Database};
 use crate::repository::monster_repository;
+use crate::{models::monster::Monster, repository::database::Database};
+use actix_multipart::Multipart;
+use actix_web::{delete, get, post, put, web, Error, HttpResponse};
+use futures::TryStreamExt;
+use std::io::Write;
+use tempfile::NamedTempFile;
 
 #[get("/monsters")]
 pub async fn get_monsters(db: web::Data<Database>) -> HttpResponse {
@@ -13,7 +13,10 @@ pub async fn get_monsters(db: web::Data<Database>) -> HttpResponse {
 }
 
 #[post("/monsters")]
-pub async fn create_monster(db: web::Data<Database>, new_monster: web::Json<Monster>) -> HttpResponse {
+pub async fn create_monster(
+    db: web::Data<Database>,
+    new_monster: web::Json<Monster>,
+) -> HttpResponse {
     let monster = monster_repository::create_monster(&db, new_monster.into_inner());
     match monster {
         Ok(monster) => HttpResponse::Created().json(monster),
@@ -40,7 +43,11 @@ pub async fn delete_monster_by_id(db: web::Data<Database>, id: web::Path<String>
 }
 
 #[put("/monsters/{id}")]
-pub async fn update_monster_by_id(db: web::Data<Database>, id: web::Path<String>, updated_monster: web::Json<Monster>) -> HttpResponse {
+pub async fn update_monster_by_id(
+    db: web::Data<Database>,
+    id: web::Path<String>,
+    updated_monster: web::Json<Monster>,
+) -> HttpResponse {
     let monster = monster_repository::update_monster_by_id(&db, &id, updated_monster.into_inner());
     match monster {
         Some(monster) => HttpResponse::Ok().json(monster),
@@ -49,7 +56,10 @@ pub async fn update_monster_by_id(db: web::Data<Database>, id: web::Path<String>
 }
 
 #[post("/monsters/import_csv")]
-pub async fn import_csv(db: web::Data<Database>, mut payload: Multipart) -> Result<HttpResponse, Error> {
+pub async fn import_csv(
+    db: web::Data<Database>,
+    mut payload: Multipart,
+) -> Result<HttpResponse, Error> {
     let mut file_name: Option<String> = None;
     let mut temp_file: Option<NamedTempFile> = None;
     let mut new_monsters: Vec<Monster> = Vec::new();
@@ -76,35 +86,40 @@ pub async fn import_csv(db: web::Data<Database>, mut payload: Multipart) -> Resu
                 .from_path(temp_file.path())
                 .unwrap();
 
-                for result in reader.deserialize::<Monster>() {
-                    match result {
-                        Ok(monster) => {
-                            new_monsters.push(monster);
-                        }
-                        Err(_) => {
-                            return Ok(HttpResponse::BadRequest().json("Incomplete data, check your file."));
-                        }
+            for result in reader.deserialize::<Monster>() {
+                match result {
+                    Ok(monster) => {
+                        new_monsters.push(monster);
+                    }
+                    Err(err) => {
+                        return Ok(
+                            HttpResponse::BadRequest().json("Incomplete data, check your file.")
+                        );
                     }
                 }
-    
-                if new_monsters.is_empty() {
-                    return Ok(HttpResponse::BadRequest().json("No valid monsters found in the CSV file"));
-                }
+            }
+
+            if new_monsters.is_empty() {
+                return Ok(
+                    HttpResponse::BadRequest().json("No valid monsters found in the CSV file")
+                );
+            }
 
             let results: Vec<Result<Monster, String>> = new_monsters
-            .iter()
-            .map(|new_monster| {
-                match monster_repository::create_monster(&db, new_monster.clone()) {
-                    Ok(monster) => Ok(monster),
-                    Err(err) => Err(err.to_string()),
-                }
-            })
-            .collect();
-    
+                .iter()
+                .map(|new_monster| {
+                    match monster_repository::create_monster(&db, new_monster.clone()) {
+                        Ok(monster) => Ok(monster),
+                        Err(err) => Err(err.to_string()),
+                    }
+                })
+                .collect();
 
-            let (successes, _errors): (Vec<_>, Vec<_>) = results.into_iter().partition(Result::is_ok);
+            let (successes, _errors): (Vec<_>, Vec<_>) =
+                results.into_iter().partition(Result::is_ok);
 
-            let successful_monsters: Vec<Monster> = successes.into_iter().map(Result::unwrap).collect();
+            let successful_monsters: Vec<Monster> =
+                successes.into_iter().map(Result::unwrap).collect();
 
             if successful_monsters.is_empty() {
                 return Ok(HttpResponse::InternalServerError().json("Failed to create monsters"));
@@ -119,13 +134,30 @@ pub async fn import_csv(db: web::Data<Database>, mut payload: Multipart) -> Resu
 
 #[cfg(test)]
 mod tests {
-    use actix_web::{test, http, App};
-    use actix_web::web::Data;
-    use crate::{
-        utils::test_utils::init_test_monsters
-    };
+
+    use crate::utils::test_utils::init_test_monsters;
+    use actix_web::http::header;
+    use actix_web::test::TestRequest;
+    use actix_web::web::{Bytes, Data};
+    use actix_web::{http, test, App};
 
     use super::*;
+
+    fn create_request(content: &str, uri: &str, filename: &str) -> TestRequest {
+        let boundary = "------------------------boundary";
+        let content_type = format!("multipart/form-data; boundary={}", boundary);
+        let data = format!(
+        "--{boundary}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"{file_name}\"\r\nContent-Type: text/csv\r\n\r\n{content}\r\n--{boundary}--\r\n",
+        boundary=boundary,
+        file_name=filename,
+        content=content
+        );
+
+        test::TestRequest::post()
+            .uri(uri)
+            .insert_header((header::CONTENT_TYPE, content_type))
+            .set_payload(Bytes::from(data))
+    }
 
     #[actix_rt::test]
     async fn test_should_get_all_monsters_correctly() {
@@ -136,40 +168,45 @@ mod tests {
 
         let req = test::TestRequest::get().uri("/monsters").to_request();
         let resp = test::call_service(&mut app, req).await;
-        
+
         assert!(resp.status().is_success());
     }
 
     #[actix_rt::test]
     async fn test_should_get_404_error_if_monster_does_not_exists() {
-        
         let db = Database::new();
-        let app = App::new().app_data(Data::new(db)).service(get_monster_by_id);
+        let app = App::new()
+            .app_data(Data::new(db))
+            .service(get_monster_by_id);
 
         let mut app = test::init_service(app).await;
 
-        let req = test::TestRequest::get().uri("/monsters/999999").to_request();
+        let req = test::TestRequest::get()
+            .uri("/monsters/999999")
+            .to_request();
 
         let resp = test::call_service(&mut app, req).await;
-        
+
         assert_eq!(resp.status(), http::StatusCode::NOT_FOUND);
     }
 
     #[actix_rt::test]
     async fn test_should_get_a_single_monster_correctly() {
-        
         let mut db = Database::new();
         let test_monsters = init_test_monsters(&mut db).await;
 
-        let app = App::new().app_data(Data::new(db)).service(get_monster_by_id);
+        let app = App::new()
+            .app_data(Data::new(db))
+            .service(get_monster_by_id);
 
         let mut app = test::init_service(app).await;
 
         let req = test::TestRequest::get()
-        .uri(format!("/monsters/{}", test_monsters[0].id).as_str()).to_request();
-        
+            .uri(format!("/monsters/{}", test_monsters[0].id).as_str())
+            .to_request();
+
         let resp = test::call_service(&mut app, req).await;
- 
+
         assert_eq!(resp.status(), http::StatusCode::OK);
     }
 
@@ -195,12 +232,12 @@ mod tests {
         };
 
         let req = test::TestRequest::post()
-        .uri("/monsters")
-        .set_json(&new_monster_data)
-        .to_request();
+            .uri("/monsters")
+            .set_json(&new_monster_data)
+            .to_request();
 
         let resp = test::call_service(&mut app, req).await;
- 
+
         assert_eq!(resp.status(), http::StatusCode::CREATED);
     }
 
@@ -209,7 +246,9 @@ mod tests {
         let mut db = Database::new();
         let _test_monsters = init_test_monsters(&mut db).await;
 
-        let app = App::new().app_data(Data::new(db)).service(update_monster_by_id);
+        let app = App::new()
+            .app_data(Data::new(db))
+            .service(update_monster_by_id);
 
         let mut app = test::init_service(app).await;
 
@@ -225,12 +264,12 @@ mod tests {
             updated_at: _test_monsters[0].updated_at.clone(),
         };
         let req = test::TestRequest::put()
-        .uri(format!("/monsters/{}", _test_monsters[0].id).as_str())
-        .set_json(&update_monster_data)
-        .to_request();
-        
+            .uri(format!("/monsters/{}", _test_monsters[0].id).as_str())
+            .set_json(&update_monster_data)
+            .to_request();
+
         let resp = test::call_service(&mut app, req).await;
- 
+
         assert_eq!(resp.status(), http::StatusCode::OK);
     }
 
@@ -239,7 +278,9 @@ mod tests {
         let mut db = Database::new();
         let _test_monsters = init_test_monsters(&mut db).await;
 
-        let app = App::new().app_data(Data::new(db)).service(update_monster_by_id);
+        let app = App::new()
+            .app_data(Data::new(db))
+            .service(update_monster_by_id);
 
         let mut app = test::init_service(app).await;
 
@@ -255,63 +296,112 @@ mod tests {
             updated_at: _test_monsters[0].updated_at.clone(),
         };
         let req = test::TestRequest::put()
-        .uri(format!("/monsters/{}", 99999).as_str())
-        .set_json(&update_monster_data)
-        .to_request();
-        
+            .uri(format!("/monsters/{}", 99999).as_str())
+            .set_json(&update_monster_data)
+            .to_request();
+
         let resp = test::call_service(&mut app, req).await;
- 
+
         assert_eq!(resp.status(), http::StatusCode::NOT_FOUND);
     }
 
     #[actix_rt::test]
     async fn test_should_delete_a_monster_correctly() {
-        
         let mut db = Database::new();
         let _test_monsters = init_test_monsters(&mut db).await;
 
-        let app = App::new().app_data(Data::new(db)).service(delete_monster_by_id);
+        let app = App::new()
+            .app_data(Data::new(db))
+            .service(delete_monster_by_id);
 
         let mut app = test::init_service(app).await;
 
         let req = test::TestRequest::delete()
-        .uri(format!("/monsters/{}", _test_monsters[0].id).as_str()).to_request();
-        
+            .uri(format!("/monsters/{}", _test_monsters[0].id).as_str())
+            .to_request();
+
         let resp = test::call_service(&mut app, req).await;
- 
+
         assert_eq!(resp.status(), http::StatusCode::NO_CONTENT);
     }
 
     #[actix_rt::test]
     async fn test_should_delete_with_404_error_if_monster_does_not_exists() {
-        
         let mut db = Database::new();
         let _test_monsters = init_test_monsters(&mut db).await;
 
-        let app = App::new().app_data(Data::new(db)).service(delete_monster_by_id);
+        let app = App::new()
+            .app_data(Data::new(db))
+            .service(delete_monster_by_id);
 
         let mut app = test::init_service(app).await;
 
         let req = test::TestRequest::delete()
-        .uri(format!("/monsters/{}", 99999).as_str()).to_request();
-        
+            .uri(format!("/monsters/{}", 99999).as_str())
+            .to_request();
+
         let resp = test::call_service(&mut app, req).await;
- 
+
         assert_eq!(resp.status(), http::StatusCode::NOT_FOUND);
     }
 
     #[actix_rt::test]
     async fn test_should_import_all_the_csv_objects_into_the_database_successfully() {
-        //Todo
+        let db = Database::new();
+        let app = App::new().app_data(Data::new(db)).service(import_csv);
+
+        let mut app = test::init_service(app).await;
+
+        let content =
+            std::str::from_utf8(include_bytes!("../utils/files/monsters-correct.csv")).unwrap();
+
+        let req =
+            create_request(content, "/monsters/import_csv", "monsters-correct.csv").to_request();
+
+        let resp = test::call_service(&mut app, req).await;
+
+        assert_eq!(resp.status(), http::StatusCode::OK);
     }
 
     #[actix_rt::test]
     async fn test_should_fail_when_importing_csv_file_with_inexistent_columns() {
-        //Todo
+        let db = Database::new();
+        let app = App::new().app_data(Data::new(db)).service(import_csv);
+
+        let mut app = test::init_service(app).await;
+
+        let content =
+            std::str::from_utf8(include_bytes!("../utils/files/monsters-wrong-column.csv"))
+                .unwrap();
+
+        let req = create_request(content, "/monsters/import_csv", "monsters-wrong-column.csv")
+            .to_request();
+
+        let resp = test::call_service(&mut app, req).await;
+
+        assert_eq!(resp.status(), http::StatusCode::BAD_REQUEST);
     }
 
     #[actix_rt::test]
     async fn test_should_fail_when_importing_csv_file_with_wrong_or_inexistent_columns() {
-        //Todo
+        let db = Database::new();
+        let app = App::new().app_data(Data::new(db)).service(import_csv);
+
+        let mut app = test::init_service(app).await;
+
+        let content =
+            std::str::from_utf8(include_bytes!("../utils/files/monsters-empty-monster.csv"))
+                .unwrap();
+
+        let req = create_request(
+            content,
+            "/monsters/import_csv",
+            "monsters-empty-monster.csv",
+        )
+        .to_request();
+
+        let resp = test::call_service(&mut app, req).await;
+
+        assert_eq!(resp.status(), http::StatusCode::BAD_REQUEST);
     }
 }
