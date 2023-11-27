@@ -72,4 +72,12 @@ Numerical list of all the steps to follow to run the application
 - Failing old tests should pass.
 - All TODO tests were implemented successfully.
 - Test code coverage should be at least 80%, and you must run it and show it to us during the recording.
+  For checking the code coverage, you can run the following command:
+  ```bash
+    cargo tarpaulin --ignore-tests --exclude-files 'src/main.rs' --out Html --output-dir ./target/tarpaulin
+  ```
 - The code style check script must pass on completion of the challenge without any modifications to the config.
+   For checking the code style, you can run the following command:
+   ```bash
+      cargo fmt --all -- --check
+   ```
