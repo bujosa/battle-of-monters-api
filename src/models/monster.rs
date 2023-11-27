@@ -1,7 +1,9 @@
+use diesel::{AsChangeset, Identifiable, Insertable, Queryable};
 use serde::{Deserialize, Serialize};
-use diesel::{Queryable, Insertable, AsChangeset, Identifiable};
 
-#[derive(Serialize, Deserialize, Debug, Clone, Queryable, Insertable, AsChangeset, Identifiable)]
+#[derive(
+    Serialize, Deserialize, Debug, Clone, Queryable, Insertable, AsChangeset, Identifiable,
+)]
 #[diesel(table_name = crate::repository::schema::monsters)]
 pub struct Monster {
     #[serde(default)]

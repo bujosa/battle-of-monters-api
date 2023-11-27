@@ -1,8 +1,18 @@
-use serde::{Deserialize, Serialize};
-use diesel::{Queryable, Insertable, AsChangeset, Identifiable, Associations};
 use crate::models::monster::Monster;
+use diesel::{AsChangeset, Associations, Identifiable, Insertable, Queryable};
+use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug, Clone, Queryable, Insertable, AsChangeset, Identifiable, Associations)]
+#[derive(
+    Serialize,
+    Deserialize,
+    Debug,
+    Clone,
+    Queryable,
+    Insertable,
+    AsChangeset,
+    Identifiable,
+    Associations,
+)]
 #[diesel(belongs_to(Monster, foreign_key = winner))]
 #[diesel(table_name = crate::repository::schema::battles)]
 pub struct Battle {
