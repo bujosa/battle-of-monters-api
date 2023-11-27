@@ -169,32 +169,82 @@ mod tests {
 
     #[actix_rt::test]
     async fn test_should_delete_a_battle_correctly() {
-        //Todo
+        let db = Database::new();
+        let battle = init_test_battle(&db).await;
+        let app = App::new().app_data(Data::new(db)).service(delete_battle);
+
+        let mut app = test::init_service(app).await;
+
+        let req = test::TestRequest::delete()
+            .uri(&format!("/battles/{}", battle.id))
+            .to_request();
+        let resp = test::call_service(&mut app, req).await;
+
+        assert!(resp.status().is_success());
     }
 
     #[actix_rt::test]
     async fn test_should_delete_with_404_error_if_battle_does_not_exists() {
-        //Todo
+        let db = Database::new();
+        let app = App::new().app_data(Data::new(db)).service(delete_battle);
+
+        let mut app = test::init_service(app).await;
+
+        let req = test::TestRequest::delete().uri("/battles/123").to_request();
+        let resp = test::call_service(&mut app, req).await;
+
+        assert_eq!(resp.status(), http::StatusCode::NOT_FOUND);
     }
 
     #[actix_rt::test]
     async fn test_should_create_a_battle_with_404_error_if_one_parameter_has_a_monster_id_does_not_exists(
     ) {
-        //Todo
+        let db = Database::new();
+        let test_monsters = init_test_monsters(&db).await;
+        let app = App::new().app_data(Data::new(db)).service(create_battle);
+
+        let mut app = test::init_service(app).await;
+
+        let battle_request = CreateBattleRequest {
+            monster_a: Some(test_monsters[0].id.clone()),
+            monster_b: Some("123".to_string()),
+        };
+
+        let req = test::TestRequest::post()
+            .uri("/battles")
+            .set_json(&battle_request)
+            .to_request();
+
+        let resp = test::call_service(&mut app, req).await;
+
+        assert_eq!(resp.status(), http::StatusCode::NOT_FOUND);
     }
 
     #[actix_rt::test]
     async fn test_should_create_a_battle_with_a_bad_request_response_if_one_parameter_is_null() {
-        //Todo
+        let db = Database::new();
+        let test_monsters = init_test_monsters(&db).await;
+        let app = App::new().app_data(Data::new(db)).service(create_battle);
+
+        let mut app = test::init_service(app).await;
+
+        let battle_request = CreateBattleRequest {
+            monster_a: Some(test_monsters[0].id.clone()),
+            monster_b: None,
+        };
+
+        let req = test::TestRequest::post()
+            .uri("/battles")
+            .set_json(&battle_request)
+            .to_request();
+
+        let resp = test::call_service(&mut app, req).await;
+
+        assert_eq!(resp.status(), http::StatusCode::BAD_REQUEST);
     }
 
     #[actix_rt::test]
     async fn test_should_create_battle_correctly_with_monster_a_winning() {
-        //Todo
-    }
-
-    #[actix_rt::test]
-    async fn test_should_create_battle_correctly_with_monster_b_winning() {
         let db = Database::new();
         let test_monsters = init_test_monsters(&db).await;
         let app = App::new().app_data(Data::new(db)).service(create_battle);
@@ -212,8 +262,41 @@ mod tests {
             .to_request();
 
         let resp = test::call_service(&mut app, req).await;
-
         assert!(resp.status().is_success());
+        let body = test::read_body(resp).await;
+        let battle_result: Battle =
+            serde_json::from_slice(&body).expect("Failed to parse response body");
+
+        assert_eq!(battle_result.winner, test_monsters[1].id.clone());
+    }
+
+    #[actix_rt::test]
+    async fn test_should_create_battle_correctly_with_monster_b_winning() {
+        let db = Database::new();
+        let test_monsters = init_test_monsters(&db).await;
+        let app = App::new().app_data(Data::new(db)).service(create_battle);
+
+        let mut app = test::init_service(app).await;
+
+        let battle_request = CreateBattleRequest {
+            monster_a: Some(test_monsters[0].id.clone()),
+            monster_b: Some(test_monsters[1].id.clone()),
+        };
+
+        let req = test::TestRequest::post()
+            .uri("/battles")
+            .set_json(&battle_request)
+            .to_request();
+
+        let resp = test::call_service(&mut app, req).await;
+        assert!(resp.status().is_success());
+
+        let body = test::read_body(resp).await;
+
+        let battle_result: Battle =
+            serde_json::from_slice(&body).expect("Failed to parse response body");
+
+        assert_eq!(battle_result.winner, test_monsters[1].id.clone());
     }
 
     #[actix_rt::test]
@@ -222,17 +305,87 @@ mod tests {
         let db = Database::new();
         let test_monsters = init_test_monsters(&db).await;
         let app = App::new().app_data(Data::new(db)).service(create_battle);
+
+        let mut app = test::init_service(app).await;
+
+        let battle_request = CreateBattleRequest {
+            monster_a: Some(test_monsters[2].id.clone()),
+            monster_b: Some(test_monsters[5].id.clone()),
+        };
+
+        let req = test::TestRequest::post()
+            .uri("/battles")
+            .set_json(&battle_request)
+            .to_request();
+
+        let resp = test::call_service(&mut app, req).await;
+        assert!(resp.status().is_success());
+
+        let body = test::read_body(resp).await;
+
+        let battle_result: Battle =
+            serde_json::from_slice(&body).expect("Failed to parse response body");
+
+        assert_eq!(battle_result.winner, test_monsters[2].id.clone());
     }
 
     #[actix_rt::test]
     async fn test_should_create_battle_correctly_with_monster_b_winning_if_theirs_speeds_same_and_monster_b_has_higher_attack(
     ) {
-        //Todo
+        let db = Database::new();
+        let test_monsters = init_test_monsters(&db).await;
+        let app = App::new().app_data(Data::new(db)).service(create_battle);
+
+        let mut app = test::init_service(app).await;
+
+        let battle_request = CreateBattleRequest {
+            monster_a: Some(test_monsters[5].id.clone()),
+            monster_b: Some(test_monsters[2].id.clone()),
+        };
+
+        let req = test::TestRequest::post()
+            .uri("/battles")
+            .set_json(&battle_request)
+            .to_request();
+
+        let resp = test::call_service(&mut app, req).await;
+        assert!(resp.status().is_success());
+
+        let body = test::read_body(resp).await;
+
+        let battle_result: Battle =
+            serde_json::from_slice(&body).expect("Failed to parse response body");
+
+        assert_eq!(battle_result.winner, test_monsters[2].id.clone());
     }
 
     #[actix_rt::test]
     async fn test_should_create_battle_correctly_with_monster_a_winning_if_theirs_defense_same_and_monster_a_has_higher_speed(
     ) {
-        //Todo
+        let db = Database::new();
+        let test_monsters = init_test_monsters(&db).await;
+        let app = App::new().app_data(Data::new(db)).service(create_battle);
+
+        let mut app = test::init_service(app).await;
+
+        let battle_request = CreateBattleRequest {
+            monster_a: Some(test_monsters[6].id.clone()),
+            monster_b: Some(test_monsters[7].id.clone()),
+        };
+
+        let req = test::TestRequest::post()
+            .uri("/battles")
+            .set_json(&battle_request)
+            .to_request();
+
+        let resp = test::call_service(&mut app, req).await;
+        assert!(resp.status().is_success());
+
+        let body = test::read_body(resp).await;
+
+        let battle_result: Battle =
+            serde_json::from_slice(&body).expect("Failed to parse response body");
+
+        assert_eq!(battle_result.winner, test_monsters[6].id.clone());
     }
 }
