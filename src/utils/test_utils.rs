@@ -1,11 +1,11 @@
-use diesel::prelude::*;
-use chrono::prelude::*;
-use crate::repository::database::Database;
-use crate::models::monster::Monster;
 use crate::models::battle::Battle;
-use crate::repository::schema::monsters::dsl::monsters;
+use crate::models::monster::Monster;
+use crate::repository::database::Database;
 use crate::repository::schema::battles::dsl::battles;
+use crate::repository::schema::monsters::dsl::monsters;
+use chrono::prelude::*;
 use diesel::associations::HasTable;
+use diesel::prelude::*;
 
 #[allow(dead_code)]
 pub async fn init_test_monsters(db: &Database) -> Vec<Monster> {
@@ -21,7 +21,7 @@ pub async fn init_test_monsters(db: &Database) -> Vec<Monster> {
             hp: 50,
             speed: 80,
             created_at: Some(current_time),
-            updated_at: Some(current_time)
+            updated_at: Some(current_time),
         },
         Monster {
             id: uuid::Uuid::new_v4().to_string(),
@@ -32,7 +32,7 @@ pub async fn init_test_monsters(db: &Database) -> Vec<Monster> {
             hp: 40,
             speed: 40,
             created_at: Some(current_time),
-            updated_at: Some(current_time)
+            updated_at: Some(current_time),
         },
         Monster {
             id: uuid::Uuid::new_v4().to_string(),
@@ -43,7 +43,7 @@ pub async fn init_test_monsters(db: &Database) -> Vec<Monster> {
             hp: 50,
             speed: 80,
             created_at: Some(current_time),
-            updated_at: Some(current_time)
+            updated_at: Some(current_time),
         },
         Monster {
             id: uuid::Uuid::new_v4().to_string(),
@@ -54,7 +54,7 @@ pub async fn init_test_monsters(db: &Database) -> Vec<Monster> {
             hp: 50,
             speed: 40,
             created_at: Some(current_time),
-            updated_at: Some(current_time)
+            updated_at: Some(current_time),
         },
         Monster {
             id: uuid::Uuid::new_v4().to_string(),
@@ -65,7 +65,7 @@ pub async fn init_test_monsters(db: &Database) -> Vec<Monster> {
             hp: 100,
             speed: 40,
             created_at: Some(current_time),
-            updated_at: Some(current_time)
+            updated_at: Some(current_time),
         },
         Monster {
             id: uuid::Uuid::new_v4().to_string(),
@@ -76,7 +76,7 @@ pub async fn init_test_monsters(db: &Database) -> Vec<Monster> {
             hp: 100,
             speed: 80,
             created_at: Some(current_time),
-            updated_at: Some(current_time)
+            updated_at: Some(current_time),
         },
         Monster {
             id: uuid::Uuid::new_v4().to_string(),
@@ -87,8 +87,8 @@ pub async fn init_test_monsters(db: &Database) -> Vec<Monster> {
             hp: 150,
             speed: 40,
             created_at: Some(current_time),
-            updated_at: Some(current_time)
-        }
+            updated_at: Some(current_time),
+        },
     ];
 
     let mut test_monsters = vec![];

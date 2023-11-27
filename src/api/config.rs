@@ -1,6 +1,9 @@
+use super::battle_apis::get_battles;
+use super::monster_apis::{
+    create_monster, delete_monster_by_id, get_monster_by_id, get_monsters, import_csv,
+    update_monster_by_id,
+};
 use actix_web::web;
-use super::monster_apis::{get_monsters, get_monster_by_id, create_monster, update_monster_by_id, delete_monster_by_id, import_csv};
-use super::battle_apis::{get_battles};
 
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(
@@ -11,6 +14,6 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(delete_monster_by_id)
             .service(update_monster_by_id)
             .service(import_csv)
-            .service(get_battles)
+            .service(get_battles),
     );
 }
