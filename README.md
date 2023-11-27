@@ -76,8 +76,17 @@ Numerical list of all the steps to follow to run the application
   ```bash
     cargo tarpaulin --ignore-tests --exclude-files 'src/main.rs' --out Html --output-dir ./target/tarpaulin
   ```
-- The code style check script must pass on completion of the challenge without any modifications to the config.
-   For checking the code style, you can run the following command:
+   If you dont have cargo tarpaulin installed, you can install it with the following command:
+   ```bash
+      cargo install cargo-tarpaulin
+   ```
+- The code style check script must pass on completion of the challenge without any modifications to the config. For checking the code style, you can run the following command:
    ```bash
       cargo fmt --all -- --check
    ```
+   If you dont have cargo fmt installed, you can install it with the following command:
+   ```bash
+      rustup component add rustfmt
+   ```
+
+
